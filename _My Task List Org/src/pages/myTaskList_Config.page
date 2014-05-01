@@ -1,0 +1,17 @@
+<apex:page sidebar="false" controller="myTaskListUtilities">
+	<apex:sectionHeader title="My Task List" subtitle="Configuration" />
+	
+	<apex:form >
+		<apex:pageMessage severity="confirm" strength="3" summary="Task Listener is Active" title="Task Listener Status" rendered="{!pushTopicEnabled}"/>
+		<apex:pageMessage severity="warning" strength="3" summary="Task Listener is not Active" title="Task Listener Status" rendered="{!NOT(pushTopicEnabled)}"/>
+
+		<apex:pageMessages />
+		
+		<apex:commandButton action="{!addPushTopicAction}" value="Add Task Listener" id="addPushTopicButton"/>	
+		<br />
+		<br />
+		<apex:commandButton action="{!deletePushTopicAction}" value="Remove Task Listener" id="deletePushTopicButton"/>	
+	
+	</apex:form>
+
+</apex:page>

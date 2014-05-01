@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomTab xmlns="http://soap.sforce.com/2006/04/metadata">
+    <description>Task list manager tab usable in the console (e.g. pinned left list), aloha UI, and Salesforce1</description>
+    <icon>Mobile_Icons/myTaskList_icon.png</icon>
+    <label>My Task List</label>
+    <mobileReady>true</mobileReady>
+    <motif>Custom173: TV Widescreen</motif>
+    <page>myTaskList</page>
+</CustomTab>

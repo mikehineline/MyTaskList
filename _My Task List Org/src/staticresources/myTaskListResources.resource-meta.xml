@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<StaticResource xmlns="http://soap.sforce.com/2006/04/metadata">
+    <cacheControl>Private</cacheControl>
+    <contentType>application/x-zip-compressed</contentType>
+    <description>Resources for myTaskList package, including custom images, css, and JavaScript files as well as Bootstrap v3.1.1 css and js, jQuery v1.11.0 js, and CometD v2.2.0 js</description>
+</StaticResource>
