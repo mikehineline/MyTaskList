@@ -225,16 +225,18 @@ global with sharing class myTaskListController {
     }
 
 	/*
-		calculateOrgHost - return the Salesforce naX.salesforce.com host name
+		calculateOrgHost - return the Salesforce host name (POD.salesforce.com or MYDOMAIN.my.salesforce.com)
 		Inputs: none
 		Returns: String thisOrgHost
 	*/
 	static String calculateOrgHost() {
 		String thisOrgHost;
+		String baseURLHost = System.URL.getSalesforceBaseUrl().getHost();
 		// Split up the derived hostname using the period as a delimiter
-		List<String> urlParts = System.URL.getSalesforceBaseUrl().getHost().replace('-api','').split('\\.');
-       	if (urlParts.size() == 3) thisOrgHost = urlParts[0] + '.salesforce.com';
-       	else if (urlParts.size() == 5) thisOrgHost = urlParts[1] + '.salesforce.com';
+		List<String> urlParts = baseURLHost.replace('-api','').split('\\.');
+       	if (urlParts.size() == 3) thisOrgHost = urlParts[0] + '.salesforce.com';  // Salesforce base URL
+       	else if (urlParts.size() == 4 && urlParts[1] == 'my') thisOrgHost = baseURLHost; // MyDomain base URL
+       	else if (urlParts.size() == 5) thisOrgHost = urlParts[1] + '.salesforce.com'; // Visualforce base URL
         return thisOrgHost;
 	}
 	
