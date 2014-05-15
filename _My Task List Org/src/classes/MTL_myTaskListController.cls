@@ -79,7 +79,7 @@ global with sharing class MTL_myTaskListController {
     	*/
     	// Get the current task sort order and filter from the page GET parameters
     	String getSortOrder = ApexPages.currentPage().getParameters().get('so');
-    	if (getSortOrder == '' || getSortOrder == null) getSortOrder = 'priorityASC';
+    	if (getSortOrder == '' || getSortOrder == null) getSortOrder = 'dateASC';
     	String getFilter = ApexPages.currentPage().getParameters().get('flt');
     	if (getFilter == '' || getFilter == null) getFilter = 'allopen';
 		// Set the base URL for this page
@@ -203,6 +203,7 @@ global with sharing class MTL_myTaskListController {
 		List<String> urlParts = baseURLHost.replace('-api','').split('\\.');
        	if (urlParts.size() == 3) thisOrgHost = urlParts[0] + '.salesforce.com';  // Salesforce base URL
        	else if (urlParts.size() == 4 && urlParts[1] == 'my') thisOrgHost = baseURLHost; // MyDomain base URL
+       	else if (urlParts.size() == 5 && urlParts[2] == 'my') thisOrgHost = baseURLHost; // Sandbox MyDomain base URL
        	else if (urlParts.size() == 5) thisOrgHost = urlParts[1] + '.salesforce.com'; // Visualforce base URL
         return thisOrgHost;
 	}

@@ -265,8 +265,8 @@ private class MTL_myTaskList_test {
 
         // Use a new test topic name to avoid conflicts with the production push topic
         //	and reset the pushTopicEnabled flag to allow us to re-add the test listener
-        //	This is necessary due to a bug in the processing of push topics in test classes
-        MTL_myTaskListUtilities.pushTopicName = 'myTaskListUpdatesTEST';
+        //	This is necessary due to push topic names needing to be unique even in test classes
+        MTL_myTaskListUtilities.pushTopicName = 'myTaskListUpdatesTEST1';
         MTL_myTaskListUtilities.pushTopicEnabled = false;
 
     	// Try to add the push topic
@@ -276,11 +276,18 @@ private class MTL_myTaskList_test {
     	System.assertEquals(true,addResultPositive);
     	// Test that the pushTopicEnabled flag was set to true
     	System.assertEquals(true,MTL_myTaskListUtilities.pushTopicEnabled);
+    	
+    	// Test that the testForPushTopic() function indicates the push topic is added
+    	// 	if the flag is cleared but the topic is in the DB
+    	MTL_myTaskListUtilities.pushTopicEnabled = false;
+    	System.assertEquals(true,MTL_myTaskListUtilities.testForPushTopic());
+    	// Test that the testforPushTopic() function also correctly reset the flag to true
+    	System.assertEquals(true,MTL_myTaskListUtilities.pushTopicEnabled);
 
     	// With the pushTopicEnabled flag true, try to re-add the topic
     	Boolean addResultNegative;
     	addResultNegative = MTL_myTaskListUtilities.addPushTopic();
-    	// Test that the push topic was added successfully
+    	// Test that the push topic addition failed
     	System.assertEquals(false,addResultNegative);
     	// Test that the pushTopicEnabled flag is still true
     	System.assertEquals(true,MTL_myTaskListUtilities.pushTopicEnabled);
@@ -301,31 +308,30 @@ private class MTL_myTaskList_test {
 		}
 		System.assertEquals(true,messageAddFail);
     	
-    	// NOTE: Not testing deletes for now due to push topic test bug
-
     	// Now try to delete the push topic
-    	//Boolean deleteResultPositive;
-    	//deleteResultPositive = MTL_myTaskListUtilities.deletePushTopic();
+    	Boolean deleteResultPositive;
+    	deleteResultPositive = MTL_myTaskListUtilities.deletePushTopic();
     	// Test that the push topic was deleted successfully
-    	//System.assertEquals(true,deleteResultPositive);
+    	System.assertEquals(true,deleteResultPositive);
     	// Test that the pushTopicEnabled flag was set to false
-    	//System.assertEquals(false,MTL_myTaskListUtilities.pushTopicEnabled);
+    	System.assertEquals(false,MTL_myTaskListUtilities.pushTopicEnabled);
     	
     	// With the push topic deleted, try to delete again
-    	//Boolean deleteResultNegative;
-    	//deleteResultNegative = MTL_myTaskListUtilities.deletePushTopic();
+    	Boolean deleteResultNegative;
+    	deleteResultNegative = MTL_myTaskListUtilities.deletePushTopic();
     	// Test that the push topic was not found/deleted
-    	//System.assertEquals(false,deleteResultNegative);
+    	System.assertEquals(false,deleteResultNegative);
     	// Test that the pushTopicEnabled flag is still false
-    	//System.assertEquals(false,MTL_myTaskListUtilities.pushTopicEnabled);
+    	System.assertEquals(false,MTL_myTaskListUtilities.pushTopicEnabled);
 
     	// Delete the pushTopic via the action method
+    	// First add the push topic since it was previously deleted
     	PageReference deletePageResult = new PageReference('about:blank');
     	deletePageResult = MTL_myTaskListUtilities.deletePushTopicAction();
     	// Verify we got a null PageReference returned
     	System.assertEquals(null,deletePageResult);
-    	// Since this delete should fail (delete test methods currently do not work due to
-    	//	push topic test bug) verify that a warning message was generated 
+    	// Since this delete should fail (listener was already deleted)
+    	//	verify that a warning message was generated 
     	allMessages = ApexPages.getMessages();
 		Boolean messageDeleteFail = false;
 		for (ApexPages.Message thisMessage : allMessages) {

@@ -28,7 +28,7 @@
 	OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED 
 	OF THE POSSIBILITY OF SUCH DAMAGE.
 */
-public class MTL_myTaskListUtilities {
+public with sharing class MTL_myTaskListUtilities {
 
     // Static variables for the Streaming API push topic
     public static String pushTopicName = 'MTL_myTaskListUpdates';
@@ -87,10 +87,12 @@ public class MTL_myTaskListUtilities {
 			myTaskListPushTopic.NotifyForOperationUndelete = true;
 			myTaskListPushTopic.NotifyForOperationDelete = true;
 			myTaskListPushTopic.NotifyForFields = 'Referenced';
-			// If statement is workaround due to bug in push topic test procedures
-			//	conflicting with real PushTopic values in DB
-			if (!Test.isRunningTest()) {
+			try {
 				insert myTaskListPushTopic;
+			} catch (System.QueryException e) {
+				// Push topic could not be added
+	        	System.Debug('The following error has occurred: ' + e.getMessage());
+				return false;
 			}
 			
 			// Set the pushTopicEnabled flag and return true
