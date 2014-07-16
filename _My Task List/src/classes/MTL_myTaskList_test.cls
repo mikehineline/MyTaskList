@@ -77,6 +77,7 @@ private class MTL_myTaskList_test {
 			thisTask.WhoId = testContact.Id;
 			thisTask.Priority = 'Normal';
         }
+        // Set the 2nd task Priority to high
         insert testTasks;
         
         // Set Visualforce page
@@ -285,10 +286,11 @@ private class MTL_myTaskList_test {
     	System.assertEquals(true,MTL_myTaskListUtilities.pushTopicEnabled);
 
     	// With the pushTopicEnabled flag true, try to re-add the topic
-    	Boolean addResultNegative;
-    	addResultNegative = MTL_myTaskListUtilities.addPushTopic();
-    	// Test that the push topic addition failed
-    	System.assertEquals(false,addResultNegative);
+/* TO DO: Add test to for adding/removing optional fields */
+    	Boolean addResultPositive2;
+    	addResultPositive2 = MTL_myTaskListUtilities.addPushTopic();
+    	// Test that the push topic addition succeeded
+    	System.assertEquals(true,addResultPositive2);
     	// Test that the pushTopicEnabled flag is still true
     	System.assertEquals(true,MTL_myTaskListUtilities.pushTopicEnabled);
     	
@@ -297,17 +299,9 @@ private class MTL_myTaskList_test {
     	addPageResult = MTL_myTaskListUtilities.addPushTopicAction();
     	// Verify we got a null PageReference returned
     	System.assertEquals(null,addPageResult);
-    	// Since this add should fail (the listener was added by previous test case) verify that
-    	//  a warning message was generated 
-    	List<ApexPages.Message> allMessages = ApexPages.getMessages();
-		Boolean messageAddFail = false;
-		for (ApexPages.Message thisMessage : allMessages) {
-    		if (thisMessage.getDetail().contains('listener was not added')) {
-				messageAddFail = true;
-			}
-		}
-		System.assertEquals(true,messageAddFail);
-    	
+    	// The add should pass
+		System.assertEquals(true,MTL_myTaskListUtilities.pushTopicEnabled);
+
     	// Now try to delete the push topic
     	Boolean deleteResultPositive;
     	deleteResultPositive = MTL_myTaskListUtilities.deletePushTopic();
@@ -332,7 +326,7 @@ private class MTL_myTaskList_test {
     	System.assertEquals(null,deletePageResult);
     	// Since this delete should fail (listener was already deleted)
     	//	verify that a warning message was generated 
-    	allMessages = ApexPages.getMessages();
+    	List<ApexPages.Message> allMessages = ApexPages.getMessages();
 		Boolean messageDeleteFail = false;
 		for (ApexPages.Message thisMessage : allMessages) {
     		if (thisMessage.getDetail().contains('listener was not deleted')) {

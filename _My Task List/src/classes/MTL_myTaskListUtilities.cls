@@ -95,7 +95,7 @@ public with sharing class MTL_myTaskListUtilities {
 		myTaskListPushTopic.NotifyForFields = 'Referenced';
 		try {
 			insert myTaskListPushTopic;
-		} catch (System.QueryException e) {
+		} catch (DmlException e) {
 			// Push topic could not be added
 	       	System.Debug('The following error has occurred: ' + e.getMessage());
 			return false;
@@ -123,7 +123,7 @@ public with sharing class MTL_myTaskListUtilities {
 				delete oldMyTaskListPushTopics;
 				pushTopicEnabled = false;
 				return true;
-			} catch (System.QueryException e) {
+			} catch (DmlException e) {
 				// Push topic could not be deleted
 	        	System.Debug('The following error has occurred: ' + e.getMessage());
 				return false;

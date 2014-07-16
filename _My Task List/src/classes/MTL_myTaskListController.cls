@@ -34,7 +34,8 @@ global with sharing class MTL_myTaskListController {
 	private static final Integer TASK_QUERY_LIMIT = 100;
 
 	// Static variable to hold the list of required fields for this package
-	public static Set<String> packageRequiredFields = new Set<String>{'Id','OwnerId','ActivityDate','Subject','Priority','Status','WhoId','Who.Name','WhatId','What.Name','IsClosed'};
+	public static Set<String> packageRequiredFields = new Set<String>{'Id','OwnerId','ActivityDate','Subject','Priority','Status','WhoId','Who.Name','WhatId','What.Name','IsClosed','IsArchived','IsDeleted','IsRecurrence','IsReminderSet'};
+	// Static variable to hold the list of required fields for this package for the PushTopic listener (excluding REFERENCE & TEXTAREA fields)
 	public static Set<String> pushTopicRequiredFields = new Set<String>{'Id','OwnerId','ActivityDate','Subject','Priority','Status','WhoId','WhatId','IsClosed'};
     // Static variables to hold Task card field information
     public static String taskFieldQuery {get; private set;}
@@ -44,7 +45,7 @@ global with sharing class MTL_myTaskListController {
     public static List<FieldContainer> taskCardDetailsFields {get; private set;}
 	
 	// Static variable to hold the list of unsafe data types that require XSS protection
-	public static Set<String> unsafeTypes = new Set<String>{'STRING','TEXTAREA','URL','COMBOBOX','EMAIL','ENCRYPTEDSTRING','MULTIPICKLIST','PHONE','PICKLIST'};
+	public static final Set<String> unsafeTypes = new Set<String>{'STRING','TEXTAREA','URL','COMBOBOX','EMAIL','ENCRYPTEDSTRING','MULTIPICKLIST','PHONE','PICKLIST'};
 
 	// Member variable to hold the list of Tasks and related info
 	public List<TaskContainer> myTaskList {get; private set;}
@@ -173,7 +174,13 @@ global with sharing class MTL_myTaskListController {
 		myTaskQueryString += taskFilter;
 		myTaskQueryString += ' ORDER BY ' + taskSortOrder;
 		myTaskQueryString += ' LIMIT ' + TASK_QUERY_LIMIT;
-		List<Task> myTasks = Database.query(myTaskQueryString);
+		List<Task> myTasks = new List<Task>(); 
+		try {
+			myTasks = Database.query(myTaskQueryString);
+		} catch (DmlException e) {
+			System.debug(LoggingLevel.ERROR, e.getMessage());
+			return;
+		}
 		
         // Fill member variable myTaskList with the user's events
         if (myTasks.size() > 0) {
@@ -335,12 +342,11 @@ global with sharing class MTL_myTaskListController {
 			// Exclude Encrypted fields to eliminate data exposure
 			if (thisFieldType != 'ENCRYPTEDSTRING') {
 				queryFields.add(hf.getFieldPath());
-/* !!!! TO DO: Skip required header fields when adding to the List 
-	Wait until after JavaScript re-write so we have some fields to test */
     	   		taskCardHeaderFields.add( new FieldContainer(hf) );
 			}
-			// If this is not a relationship field, add it to the pushTopic field list
-			if (thisFieldType != 'REFERENCE' && thisFieldType != 'TEXTAREA') {
+			// If this is not an unsupported PushTopic field type (references, text area, & relationships),
+			// add it to the pushTopic field list
+			if (thisFieldType != 'REFERENCE' && thisFieldType != 'TEXTAREA' && !hf.getFieldPath().contains('.')) {
 				pushTopicFields.add(hf.getFieldPath());
 			}
 		}
@@ -350,12 +356,11 @@ global with sharing class MTL_myTaskListController {
 			if (thisFieldType != 'ENCRYPTEDSTRING') {
 				// Exclude Encrypted fields to eliminate data exposure
 				queryFields.add(df.getFieldPath());
-/* !!!! TO DO: Skip required details fields when adding to the List 
-	Wait until after JavaScript re-write so we have some fields to test */
     	   		taskCardDetailsFields.add( new FieldContainer(df) );
 			}
-			// If this is not a relationship field, add it to the pushTopic field list
-			if (thisFieldType != 'REFERENCE' && thisFieldType != 'TEXTAREA') {
+			// If this is not an unsupported PushTopic field type (references, text area, & relationships),
+			// add it to the pushTopic field list
+			if (thisFieldType != 'REFERENCE' && thisFieldType != 'TEXTAREA' && !df.getFieldPath().contains('.')) {
 				pushTopicFields.add(df.getFieldPath());
 			}
 		}
@@ -394,7 +399,13 @@ global with sharing class MTL_myTaskListController {
 		thisTaskQueryString += ' WHERE t.Id = \'' + recordID + '\'';
 		thisTaskQueryString += ' LIMIT 1';
 		thisTaskQueryString += ' ALL ROWS';
-		Task thisTask = Database.query(thisTaskQueryString);
+		Task thisTask;
+		try {
+			thisTask = Database.query(thisTaskQueryString);
+		} catch (DmlException e) {
+			System.debug(LoggingLevel.ERROR, e.getMessage());
+			return null;
+		}
 
 		// Determine if we should perform the DML update operation; by default, do not unless we get a valid targetField
 		Boolean performDML = false;
@@ -433,12 +444,16 @@ global with sharing class MTL_myTaskListController {
 
 		// Get the sObject again to ensure calculated fields cush as IsClosed are up to date
 		if (reQueryRecord) {
-			thisTask = Database.query(thisTaskQueryString);
+			try {
+				thisTask = Database.query(thisTaskQueryString);
+			} catch (DmlException e) {
+				System.debug(LoggingLevel.ERROR, e.getMessage());
+				return null;
+			}
 		}
 		
 		// Return the Task sObject
 		return thisTask;
-		
 	}
 	
 	/*
@@ -485,6 +500,7 @@ global with sharing class MTL_myTaskListController {
 			fieldValueClean = fieldValueClean.replace('<','&lt;');
 			fieldValueClean = fieldValueClean.replace('>','&gt;');
 			fieldValueClean = fieldValueClean.replace('"','&quot;');
+			fieldValueClean = fieldValueClean.replace('\'','&#39;');
 			fieldValue = fieldValueClean;
 		}
 		
@@ -520,8 +536,6 @@ global with sharing class MTL_myTaskListController {
         	returnString = fieldLabelPrefix + fieldLabel + fieldLabelSuffix + fieldValuePrefix + fieldValue + fieldValueSuffix + lineSuffix;
 		} else if (fieldType == 'REFERENCE') {
 			// Add a hyperlink to Lookup (Reference) fields
-/* !!!! TO DO: perform lookup to someLookupIdField.Name (can we hard code Who.Name, etc. until custom lookup fields are supported on Tasks?  can you count on "Name" field?) */
-			// Add a hyperlink to URL fields
 			if (outputStyle == 'EMAILHTML') {
 				fieldValuePrefix = '<a href="' + baseURL + fieldValue + '">';
 				fieldValueSuffix = '</a>';
@@ -559,7 +573,13 @@ global with sharing class MTL_myTaskListController {
 		thisTaskQueryString += ' WHERE t.Id = \'' + recordID + '\'';
 		thisTaskQueryString += ' LIMIT 1';
 		thisTaskQueryString += ' ALL ROWS';
-		Task thisTask = Database.query(thisTaskQueryString);
+		Task thisTask;
+		try {
+			thisTask = Database.query(thisTaskQueryString);
+		} catch (DmlException e) {
+			System.debug(LoggingLevel.ERROR, e.getMessage());
+			return false;
+		}
 
 		// If the task was not found, return false
 		if(thisTask == null) {
@@ -597,9 +617,13 @@ global with sharing class MTL_myTaskListController {
         }
         // Additional, optional (field set) task card header fields
 		for (FieldContainer fh: taskCardHeaderFields) {
-			if (thisTask.get(fh.fieldName) != null) {
-				thisHTMLBody += MTL_formatFieldValue(fh.fieldLabel, thisTask.get(fh.fieldName), fh.fieldType.name(), 'EMAILHTML');
-				thisPlainTextBody += MTL_formatFieldValue(fh.fieldLabel, thisTask.get(fh.fieldName), fh.fieldType.name(), 'EMAILPLAIN');
+			// Test for and skip relationship fields (Object.Field)
+			Integer thisDotLocation = fh.fieldName.indexOf('.');
+			if (thisDotLocation == -1) {
+				if (thisTask.get(fh.fieldName) != null) {
+					thisHTMLBody += MTL_formatFieldValue(fh.fieldLabel, thisTask.get(fh.fieldName), fh.fieldType.name(), 'EMAILHTML');
+					thisPlainTextBody += MTL_formatFieldValue(fh.fieldLabel, thisTask.get(fh.fieldName), fh.fieldType.name(), 'EMAILPLAIN');
+				}
 			}
 		}
 		// Separator for the header & details section
@@ -613,9 +637,13 @@ global with sharing class MTL_myTaskListController {
 		}
         // Additional, optional (field set) task card details fields
 		for (FieldContainer fd: taskCardDetailsFields) {
-			if (thisTask.get(fd.FieldName) != null) {
-				thisHTMLBody += MTL_formatFieldValue(fd.fieldLabel, thisTask.get(fd.fieldName), fd.fieldType.name(), 'EMAILHTML');
-				thisPlainTextBody += MTL_formatFieldValue(fd.fieldLabel, thisTask.get(fd.fieldName), fd.fieldType.name(), 'EMAILPLAIN');
+			// Test for and skip relationship fields (Object.Field)
+			Integer thisDotLocation = fd.fieldName.indexOf('.');
+			if (thisDotLocation == -1) {
+				if (thisTask.get(fd.fieldName) != null) {
+					thisHTMLBody += MTL_formatFieldValue(fd.fieldLabel, thisTask.get(fd.fieldName), fd.fieldType.name(), 'EMAILHTML');
+					thisPlainTextBody += MTL_formatFieldValue(fd.fieldLabel, thisTask.get(fd.fieldName), fd.fieldType.name(), 'EMAILPLAIN');
+				}
 			}
 		}
         // Assemble the mail
