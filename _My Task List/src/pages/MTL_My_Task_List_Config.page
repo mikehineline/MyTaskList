@@ -32,16 +32,26 @@
     <apex:sectionHeader title="My Task List" subtitle="Configuration" />
     
     <apex:form >
-        <apex:pageMessage severity="confirm" strength="3" summary="Task Listener is Active" title="Task Listener Status" rendered="{!pushTopicEnabled}"/>
-        <apex:pageMessage severity="warning" strength="3" summary="Task Listener is not Active" title="Task Listener Status" rendered="{!NOT(pushTopicEnabled)}"/>
-
-        <apex:pageMessages />
+        <apex:pageBlock title="Push Topic configuration">
+	        <apex:pageMessage severity="confirm" strength="3" summary="Task Push Topic is Active" title="Task Push Topic Status" rendered="{!pushTopicEnabled}"/>
+    	    <apex:pageMessage severity="warning" strength="3" summary="Task Push Topic is not Active" title="Task Push Topic Status" rendered="{!NOT(pushTopicEnabled)}"/>
+        	<apex:pageMessages />
         
-        <apex:commandButton action="{!addPushTopicAction}" value="Add Task Listener" id="addPushTopicButton"/>  
-        <br />
-        <br />
-        <apex:commandButton action="{!deletePushTopicAction}" value="Remove Task Listener" id="deletePushTopicButton"/> 
-    
+	        <apex:commandButton action="{!addPushTopicAction}" value="{! IF(pushTopicEnabled,'Re-add','Add')} Task Push Topic" id="addPushTopicButton"/>  
+    		<br />
+        	<br />
+        	<apex:commandButton action="{!deletePushTopicAction}" value="Remove Task Push Topic" id="deletePushTopicButton"/> 
+        	<br />
+        	<br />
+        </apex:pageBlock>
+        
+        <apex:pageBlock title="Task card configuration">
+	       	<apex:outputText >
+		        To configure optional task card header and footer fields, <a target="_blank" href="/p/setup/custent/FieldSetListUI/d?setupid=TaskFieldSets&tableEnumOrId=Task">click here</a> to edit the Task field sets named:<br />
+		        &quot;My Task List - Card Header&quot;<br />
+				&quot;My Task List - Card Details&quot;<br />
+    		</apex:outputText>
+    	</apex:pageBlock>
     </apex:form>
 
 </apex:page>

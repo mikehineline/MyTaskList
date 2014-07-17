@@ -31,7 +31,7 @@
 */
 global with sharing class MTL_myTaskListController {
 	// Static variable to limit SOQL query results in task queries
-	private static final Integer TASK_QUERY_LIMIT = 100;
+	private static final Integer TASK_QUERY_LIMIT = 50;
 
 	// Static variable to hold the list of required fields for this package
 	public static Set<String> packageRequiredFields = new Set<String>{'Id','OwnerId','ActivityDate','Subject','Priority','Status','WhoId','Who.Name','WhatId','What.Name','IsClosed','IsArchived','IsDeleted','IsRecurrence','IsReminderSet'};
