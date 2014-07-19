@@ -286,7 +286,6 @@ private class MTL_myTaskList_test {
     	System.assertEquals(true,MTL_myTaskListUtilities.pushTopicEnabled);
 
     	// With the pushTopicEnabled flag true, try to re-add the topic
-/* TO DO: Add test to for adding/removing optional fields */
     	Boolean addResultPositive2;
     	addResultPositive2 = MTL_myTaskListUtilities.addPushTopic();
     	// Test that the push topic addition succeeded

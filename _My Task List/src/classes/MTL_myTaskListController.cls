@@ -111,7 +111,7 @@ global with sharing class MTL_myTaskListController {
     	// Initialize the sort onClick scripts
     	taskSortDateASCScript = 'https://' + thisPage + '?so=dateASC&flt=' + getFilter + '&isdtp=' + pageisdtp;
     	taskSortDateDESCScript = 'https://' + thisPage + '?so=dateDESC&flt=' + getFilter + '&isdtp=' + pageisdtp;
-    	taskSortPriorityScript = 'https://' + thisPage + '?so=priorityASC&flt=' + getFilter + '&isdtp=' + pageisdtp;
+    	taskSortPriorityScript = 'https://' + thisPage + '?so=priorityDESC&flt=' + getFilter + '&isdtp=' + pageisdtp;
     	// Initialize the filter onClick scripts
         taskFilterAllOpenScript ='https://' + thisPage + '?flt=allopen&so=' + getSortOrder + '&isdtp=' + pageisdtp;
         taskFilterOverdueScript ='https://' + thisPage + '?flt=overdue&so=' + getSortOrder + '&isdtp=' + pageisdtp;
@@ -126,11 +126,11 @@ global with sharing class MTL_myTaskListController {
     	// 	and then ascending by priority (to put high on top)
     	String taskSortOrder;
     	if (getSortOrder == 'dateDESC') {
-    		taskSortOrder = 't.ActivityDate DESC, t.Priority ASC';
-    	} else if (getSortOrder == 'priorityASC') {
-    		taskSortOrder = 't.Priority ASC, t.ActivityDate ASC';
+    		taskSortOrder = 't.ActivityDate DESC, t.Priority DESC';
+    	} else if (getSortOrder == 'priorityDESC') {
+    		taskSortOrder = 't.Priority DESC, t.ActivityDate ASC';
     	} else {
-    		taskSortOrder = 't.ActivityDate ASC, t.Priority ASC';
+    		taskSortOrder = 't.ActivityDate ASC, t.Priority DESC';
     	}
     	// Get the task filter from the page GET parameters
     	// Default to all open
@@ -216,7 +216,7 @@ global with sharing class MTL_myTaskListController {
             // Define the CSS class addition based on due date; by default, no modification is made
             dueDateStyle = '';
 
-            if (t.Priority.toLowerCase() == 'high') {
+            if (t.Priority == 'High') {
 	            // If priority is high, apply Bootstrap CSS class for a red panel header
             	priorityPanelClass = ' panel-danger';
 	            // If priority is high, do not apply the hidden class
@@ -660,3 +660,4 @@ global with sharing class MTL_myTaskListController {
 		return true;
 	}
 }
+
