@@ -4,6 +4,11 @@
         <fullName>MTL_Card_Details</fullName>
         <description>Used by the My Task List package to define which fields are shown in the Task card details, which are visible upon expansion of the tab.</description>
         <displayedFields>
+            <field>Type</field>
+            <isFieldManaged>false</isFieldManaged>
+            <isRequired>false</isRequired>
+        </displayedFields>
+        <displayedFields>
             <field>Description</field>
             <isFieldManaged>false</isFieldManaged>
             <isRequired>false</isRequired>

@@ -34,7 +34,7 @@ global with sharing class MTL_myTaskListController {
 	private static final Integer TASK_QUERY_LIMIT = 50;
 
 	// Static variable to hold the list of required fields for this package
-	public static Set<String> packageRequiredFields = new Set<String>{'Id','OwnerId','ActivityDate','Subject','Priority','Status','WhoId','Who.Name','WhatId','What.Name','IsClosed','IsArchived','IsDeleted','IsRecurrence','IsReminderSet'};
+	public static Set<String> packageRequiredFields = new Set<String>{'Id','OwnerId','ActivityDate','Subject','Priority','Status','WhoId','Who.Name','WhatId','What.Name','IsHighPriority','IsClosed','IsArchived','IsDeleted','IsRecurrence','IsReminderSet'};
 	// Static variable to hold the list of required fields for this package for the PushTopic listener (excluding REFERENCE & TEXTAREA fields)
 	public static Set<String> pushTopicRequiredFields = new Set<String>{'Id','OwnerId','ActivityDate','Subject','Priority','Status','WhoId','WhatId','IsClosed'};
     // Static variables to hold Task card field information
@@ -46,7 +46,50 @@ global with sharing class MTL_myTaskListController {
 	
 	// Static variable to hold the list of unsafe data types that require XSS protection
 	public static final Set<String> unsafeTypes = new Set<String>{'STRING','TEXTAREA','URL','COMBOBOX','EMAIL','ENCRYPTEDSTRING','MULTIPICKLIST','PHONE','PICKLIST'};
+	
+	// Static getters to hold the required field labels, which respect users' language
+	public static String getDueLabel() { 
+		// Clean up the English label
+		String thisLabel = Task.ActivityDate.getDescribe().getLabel();
+		if (thisLabel == 'Due Date Only') thisLabel = 'Due Date';
+		return thisLabel;
+	}
+	public static String getRelatedToLabel() {
+		String thisLabel = Task.WhatId.getDescribe().getLabel();
+		// Strip the trailing ID that is added to the label name
+		thisLabel = thisLabel.replace(' ID','');
+		// Clean up the English label
+		if (thisLabel == 'Opportunity/Account') thisLabel = 'Related To';
+		return thisLabel;
+	} 
+	public static String getStatusLabel() { return Task.Status.getDescribe().getLabel(); } 
+	public static String getPriorityLabel() {return Task.Priority.getDescribe().getLabel(); } 
+	public static String getWhoLabel() {
+		String thisLabel = Task.WhoId.getDescribe().getLabel();
+		// Strip the trailing ID that is added to the label name
+		thisLabel = thisLabel.replace(' ID','');
+		// Clean up the English label
+		if (thisLabel == 'Contact/Lead') thisLabel = 'Who';
+		return thisLabel;
+	} 
 
+	// Static getter to indicate whether user has write access to PushTopic
+	//	in which case they will be presented with the config option
+	public static Boolean getPushTopicsPermissionsCreate() { return Schema.sObjectType.PushTopic.isCreateable(); }
+	
+	// Static getter to return the Salesforce host name (POD.salesforce.com or MYDOMAIN.my.salesforce.com)
+	public static String getOrgHost() {
+		String thisOrgHost;
+		String baseURLHost = System.URL.getSalesforceBaseUrl().getHost();
+		// Split up the derived hostname using the period as a delimiter
+		List<String> urlParts = baseURLHost.replace('-api','').split('\\.');
+       	if (urlParts.size() == 3) thisOrgHost = urlParts[0] + '.salesforce.com';  // Salesforce base URL
+       	else if (urlParts.size() == 4 && urlParts[1] == 'my') thisOrgHost = baseURLHost; // MyDomain base URL
+       	else if (urlParts.size() == 5 && urlParts[2] == 'my') thisOrgHost = baseURLHost; // Sandbox MyDomain base URL
+       	else if (urlParts.size() == 5) thisOrgHost = urlParts[1] + '.salesforce.com'; // Visualforce base URL
+        return thisOrgHost;
+	}
+	
 	// Member variable to hold the list of Tasks and related info
 	public List<TaskContainer> myTaskList {get; private set;}
 
@@ -106,7 +149,7 @@ global with sharing class MTL_myTaskListController {
     	}
     	if (getFilter == '' || getFilter == null) getFilter = 'allopen';
 		// Set the base URL for this page
-		orgHost = calculateOrgHost();
+		orgHost = getOrgHost();
         String thisPage = orgHost + System.URL.getCurrentRequestUrl().getPath();
     	// Initialize the sort onClick scripts
     	taskSortDateASCScript = 'https://' + thisPage + '?so=dateASC&flt=' + getFilter + '&isdtp=' + pageisdtp;
@@ -126,11 +169,11 @@ global with sharing class MTL_myTaskListController {
     	// 	and then ascending by priority (to put high on top)
     	String taskSortOrder;
     	if (getSortOrder == 'dateDESC') {
-    		taskSortOrder = 't.ActivityDate DESC, t.Priority DESC';
+    		taskSortOrder = 't.ActivityDate DESC, t.IsHighPriority DESC';
     	} else if (getSortOrder == 'priorityDESC') {
-    		taskSortOrder = 't.Priority DESC, t.ActivityDate ASC';
+    		taskSortOrder = 't.IsHighPriority DESC, t.ActivityDate ASC';
     	} else {
-    		taskSortOrder = 't.ActivityDate ASC, t.Priority DESC';
+    		taskSortOrder = 't.ActivityDate ASC, t.IsHighPriority DESC';
     	}
     	// Get the task filter from the page GET parameters
     	// Default to all open
@@ -177,10 +220,7 @@ global with sharing class MTL_myTaskListController {
 		List<Task> myTasks = new List<Task>(); 
 		try {
 			myTasks = Database.query(myTaskQueryString);
-		} catch (DmlException e) {
-			System.debug(LoggingLevel.ERROR, e.getMessage());
-			return;
-		}
+		} catch (DmlException e) { System.debug(LoggingLevel.ERROR, e.getMessage()); return; }
 		
         // Fill member variable myTaskList with the user's events
         if (myTasks.size() > 0) {
@@ -216,7 +256,7 @@ global with sharing class MTL_myTaskListController {
             // Define the CSS class addition based on due date; by default, no modification is made
             dueDateStyle = '';
 
-            if (t.Priority == 'High') {
+            if (t.isHighPriority == true) {
 	            // If priority is high, apply Bootstrap CSS class for a red panel header
             	priorityPanelClass = ' panel-danger';
 	            // If priority is high, do not apply the hidden class
@@ -275,23 +315,6 @@ global with sharing class MTL_myTaskListController {
 		}
     }
 
-	/*
-		calculateOrgHost - return the Salesforce host name (POD.salesforce.com or MYDOMAIN.my.salesforce.com)
-		Inputs: none
-		Returns: String thisOrgHost
-	*/
-	static String calculateOrgHost() {
-		String thisOrgHost;
-		String baseURLHost = System.URL.getSalesforceBaseUrl().getHost();
-		// Split up the derived hostname using the period as a delimiter
-		List<String> urlParts = baseURLHost.replace('-api','').split('\\.');
-       	if (urlParts.size() == 3) thisOrgHost = urlParts[0] + '.salesforce.com';  // Salesforce base URL
-       	else if (urlParts.size() == 4 && urlParts[1] == 'my') thisOrgHost = baseURLHost; // MyDomain base URL
-       	else if (urlParts.size() == 5 && urlParts[2] == 'my') thisOrgHost = baseURLHost; // Sandbox MyDomain base URL
-       	else if (urlParts.size() == 5) thisOrgHost = urlParts[1] + '.salesforce.com'; // Visualforce base URL
-        return thisOrgHost;
-	}
-	
 	/*
 		MTL_initializeTaskFields - parse the MTL field sets to get field information required
 			for processing fields in the Task card header and details, including the SOQL
@@ -384,6 +407,7 @@ global with sharing class MTL_myTaskListController {
 		- ID recordID - ID of the record to update
 		- String targetField - API name of the field to update (null if just getting the updated task from the DB)
 		- String newValue - new value to store in targetField (null if just getting the updated task from the DB)
+			(for ActivityDate, this is a delta in days to be added to the current ActivityDate)
 		Returns:
 		- Task - the updated Task sObject
 	*/
@@ -402,10 +426,7 @@ global with sharing class MTL_myTaskListController {
 		Task thisTask;
 		try {
 			thisTask = Database.query(thisTaskQueryString);
-		} catch (DmlException e) {
-			System.debug(LoggingLevel.ERROR, e.getMessage());
-			return null;
-		}
+		} catch (DmlException e) { System.debug(LoggingLevel.ERROR, e.getMessage()); return null; }
 
 		// Determine if we should perform the DML update operation; by default, do not unless we get a valid targetField
 		Boolean performDML = false;
@@ -423,6 +444,17 @@ global with sharing class MTL_myTaskListController {
 			thisTask.Priority = newValue;
 			// Trigger the DML update
 			performDML = true;
+			// Trigger querying the sObject again to ensure calculated field IsHighPriority is up to date
+			reQueryRecord = true;
+		} else if (targetField == 'ActivityDate') {
+			// If ActivityDate is null and asked to push, first set it to today
+			if (thisTask.ActivityDate == null) {
+				thisTask.ActivityDate = Date.today();
+			}
+			// For ActivityDate, newValue constitutes the amount to add to the current ActivityDate
+			thisTask.ActivityDate = thisTask.ActivityDate.addDays(Integer.valueOf(newValue));
+			// Trigger the DML update
+			performDML = true;
 		} else if (targetField == null || targetField == '') {
 			// Reiterate no DML update and no requery; just passing the object back
 			performDML = false;
@@ -436,20 +468,14 @@ global with sharing class MTL_myTaskListController {
 		if (performDML) {
 			try {
 				update thisTask;	
-			} catch (DmlException e) {
-				System.debug(LoggingLevel.ERROR, e.getMessage());
-				return null;
-			}
+			} catch (DmlException e) { System.debug(LoggingLevel.ERROR, e.getMessage()); return null; }
 		}
 
-		// Get the sObject again to ensure calculated fields cush as IsClosed are up to date
+		// Get the sObject again to ensure calculated fields such as IsClosed are up to date
 		if (reQueryRecord) {
 			try {
 				thisTask = Database.query(thisTaskQueryString);
-			} catch (DmlException e) {
-				System.debug(LoggingLevel.ERROR, e.getMessage());
-				return null;
-			}
+			} catch (DmlException e) { System.debug(LoggingLevel.ERROR, e.getMessage()); return null; }
 		}
 		
 		// Return the Task sObject
@@ -479,7 +505,7 @@ global with sharing class MTL_myTaskListController {
 		String returnString = '';
 
 		// Get the base URL for object links
-		String orgHost = calculateOrgHost();
+		String orgHost = getOrgHost();
 		String baseURL = 'https://' + orgHost + '/';
 
 		// Set the field label styling
@@ -539,6 +565,9 @@ global with sharing class MTL_myTaskListController {
 			if (outputStyle == 'EMAILHTML') {
 				fieldValuePrefix = '<a href="' + baseURL + fieldValue + '">';
 				fieldValueSuffix = '</a>';
+				// For a reference, lookup the Name/Subject of the referenced record
+				// and update the field value to the friendly name 
+				fieldValue = getNameFromID((ID)fieldValue);
 			}
         	returnString = fieldLabelPrefix + fieldLabel + fieldLabelSuffix + fieldValuePrefix + fieldValue + fieldValueSuffix + lineSuffix;
 		} else if (fieldType == 'PERCENT') {
@@ -576,10 +605,7 @@ global with sharing class MTL_myTaskListController {
 		Task thisTask;
 		try {
 			thisTask = Database.query(thisTaskQueryString);
-		} catch (DmlException e) {
-			System.debug(LoggingLevel.ERROR, e.getMessage());
-			return false;
-		}
+		} catch (DmlException e) { System.debug(LoggingLevel.ERROR, e.getMessage()); return false; }
 
 		// If the task was not found, return false
 		if(thisTask == null) {
@@ -587,7 +613,7 @@ global with sharing class MTL_myTaskListController {
 		}
 
 		// Get the base URL for object links
-		String orgHost = calculateOrgHost();
+		String orgHost = getOrgHost();
 		String thisTaskBaseURL = 'https://' + orgHost + '/';
 
 		/*
@@ -652,12 +678,56 @@ global with sharing class MTL_myTaskListController {
         // Send the mail
         try {
         	Messaging.SendEmailresult[] mailResult = Messaging.sendEmail(new Messaging.SingleEmailMessage[] { thisMail }); 
-        } catch (System.EmailException e) {
-        	System.Debug('The following error has occurred: ' + e.getMessage());
-        	return false;
-        }
+        } catch (System.EmailException e) { System.Debug('The following error has occurred: ' + e.getMessage()); return false; }
 		
 		return true;
+	}
+
+	/*
+		getNameFromID - Remoting method to get an record's Name (or Subject for Tasks/Events)
+			given an sObject ID
+		Inputs:
+		- ID recordID - ID of the record
+		Returns:
+		- String name - sObject.Name value (or sObject.Subject for Tasks/Events)
+	*/
+	@RemoteAction
+	global static String getNameFromID(ID recordID) {
+		// Get the sObject token from the ID
+		Schema.SObjectType token = recordID.getSObjectType();
+		// Using the token, do a describe and construct query the record's Name
+		Schema.DescribeSObjectResult dr = token.getDescribe();
+
+		// Determine Object field to use
+		// 	This will be sObject.Name for most objects and sObject.Subject for Tasks/Events
+		Map<String, Schema.SObjectField> fieldMap = dr.fields.getMap();
+		String queryFieldName = 'Name';
+		if (fieldMap.containsKey('Name')) {
+			// Most Salesforce objects have a Name field
+			queryFieldName = 'Name';
+		} else if (fieldMap.containsKey('Subject')) {
+			// Tasks/Events do not have a Name field so use Subject
+			queryFieldName = 'Subject';
+		} else {
+			// Unknown object type, return the recordID
+			return (String)recordID;
+		}
+
+		// Query for the appropriate field from the detected object for the given ID
+		String queryString = 'SELECT ' + queryFieldName + ' FROM ' + dr.getName();
+		queryString += ' WHERE Id=\'' + recordID + '\'';
+		queryString += ' LIMIT 1 ALL ROWS';
+		sObject returnObject;
+		try {
+			returnObject = Database.query(queryString);
+		} catch (DmlException e) { System.debug(LoggingLevel.ERROR, e.getMessage()); }
+
+		// Return the sObject's Name
+		String returnString = '';
+		if (returnObject != null) {
+			returnString = (String)returnObject.get(queryFieldName);
+		}
+		return returnString;
 	}
 }
 

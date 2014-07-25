@@ -54,13 +54,14 @@ private class MTL_myTaskList_test {
         // Return the list of records created
         return newTasks;
     }
-
+    
 	/*
 		myTaskListTestMethod - main test class for the My Task List package components
 	*/
     static testMethod void myTaskListTestMethod() {
         // Create a test opportunity for the WhatId field
-        Opportunity testOpportunity = new Opportunity(Name='Test Opportunity',CloseDate=Date.today()+365,StageName='Prospecting');
+        String TEST_OPPORTUNITY_NAME = 'Test Opportunity';
+        Opportunity testOpportunity = new Opportunity(Name=TEST_OPPORTUNITY_NAME,CloseDate=Date.today()+365,StageName='Prospecting');
         insert testOpportunity;
         
         // Create a test contact for the WhoId field
@@ -69,7 +70,8 @@ private class MTL_myTaskList_test {
 
         // Initialize test data and add test data for required fields
         final Integer NUM_TEST_TASKS = 20;
-        List<Task> testTasks = CreateTasks('TestTask_',NUM_TEST_TASKS);
+        String TASK_BASE_NAME = 'TestTask_';
+        List<Task> testTasks = CreateTasks(TASK_BASE_NAME,NUM_TEST_TASKS);
         for(Task thisTask: testTasks) {
 			thisTask.OwnerID = UserInfo.getUserId();
 			thisTask.Status = 'In Progress';
@@ -77,7 +79,6 @@ private class MTL_myTaskList_test {
 			thisTask.WhoId = testContact.Id;
 			thisTask.Priority = 'Normal';
         }
-        // Set the 2nd task Priority to high
         insert testTasks;
         
         // Set Visualforce page
@@ -93,6 +94,36 @@ private class MTL_myTaskList_test {
         System.assertEquals(controller.myTaskList.size(),NUM_TEST_TASKS); 
         // Test aloha link formatting
         System.assertEquals(controller.pageFormat,'aloha');
+        // Test that getDueLabel set the ActivityDate label correctly
+        String testLabel = MTL_myTaskListController.getDueLabel();
+        if (Task.ActivityDate.getDescribe().getLabel() == 'Due Date Only') {
+        	System.assertEquals('Due Date',testLabel);
+        } else {
+        	System.assertEquals(Task.ActivityDate.getDescribe().getLabel(),testLabel);
+        }
+        // Test that getRelatedToLabel set the WhatId label correctly
+        testLabel = MTL_myTaskListController.getRelatedToLabel();
+        if (Task.WhatId.getDescribe().getLabel() == 'Opportunity/Account ID') {
+        	System.assertEquals('Related To',testLabel);
+        } else {
+        	System.assertEquals(Task.WhatId.getDescribe().getLabel().length() - 3,testLabel.length());
+        }
+        // Test that getStatusLabel set the Status label correctly
+        testLabel = MTL_myTaskListController.getStatusLabel();
+        System.assertEquals(Task.Status.getDescribe().getLabel(),testLabel);
+        // Test that getPriorityLabel set the Priority label correctly
+        testLabel = MTL_myTaskListController.getPriorityLabel();
+        System.assertEquals(Task.Priority.getDescribe().getLabel(),testLabel);
+        // Test that getWhoLabel set the Who label correctly
+        testLabel = MTL_myTaskListController.getWhoLabel();
+        if (Task.WhoId.getDescribe().getLabel() == 'Contact/Lead ID') {
+        	System.assertEquals('Who',testLabel);
+        } else {
+        	System.assertEquals(Task.WhoId.getDescribe().getLabel().length() - 3,testLabel.length());
+        }
+        // Test that getPushTopicsPermissionsCreate detects whether the PushTopic object is creatable correctly
+        Boolean testValue = MTL_myTaskListController.getPushTopicsPermissionsCreate();
+        System.assertEquals(Schema.sObjectType.PushTopic.isCreateable(),testValue);
 
         /*
         	Test console formatting
@@ -118,13 +149,29 @@ private class MTL_myTaskList_test {
         		should result in IsClosed = true for the passed task
         */
         Task updatedTask = MTL_myTaskListController.updateTask(testTasks[0].Id,'Status','Completed');
-        System.assertEquals(updatedTask.IsClosed,true);
+        System.assertEquals(true,updatedTask.IsClosed);
 
         /*
         	Test the updateTask remote static action - modify Priority to high
         */
         Task updatedTask2 = MTL_myTaskListController.updateTask(testTasks[0].Id,'Priority','High');
-        System.assertEquals(updatedTask2.Priority,'High');
+        System.assertEquals('High',updatedTask2.Priority);
+        System.assertEquals(true,updatedTask2.IsHighPriority);
+
+        /*
+        	Test the updateTask remote static action - add 1 day to ActivityDate
+        */
+        // Test when ActivityDate is set
+        Integer NUM_DAYS_OUT_FOR_TEST_TASK = 5;
+        testTasks[0].ActivityDate = Date.today().addDays(NUM_DAYS_OUT_FOR_TEST_TASK);
+        update testTasks[0];
+        Task updatedTask3 = MTL_myTaskListController.updateTask(testTasks[0].Id,'ActivityDate','1');
+        System.assertEquals(Date.today().addDays(NUM_DAYS_OUT_FOR_TEST_TASK + 1),updatedTask3.ActivityDate);
+        // Test when ActivityDate is null
+        testTasks[0].ActivityDate = null;
+        update testTasks[0];
+        Task updatedTask4 = MTL_myTaskListController.updateTask(testTasks[0].Id,'ActivityDate','1');
+        System.assertEquals(Date.today().addDays(1),updatedTask4.ActivityDate);
 
         /*
         	Test the updateTask remote static action - query only
@@ -132,13 +179,29 @@ private class MTL_myTaskList_test {
         */
 		Task originalTask = [SELECT LastModifiedDate from Task where Id = :testTasks[1].Id];
         DateTime originalDate = originalTask.LastModifiedDate;
-        Task updatedTask3 = MTL_myTaskListController.updateTask(testTasks[1].Id,null,null);
+        Task updatedTask5 = MTL_myTaskListController.updateTask(testTasks[1].Id,null,null);
 		originalTask = [SELECT LastModifiedDate from Task where Id = :testTasks[1].Id];
         DateTime newDate = originalTask.LastModifiedDate;
         // Validate record was returned
-        System.assertEquals(updatedTask3.Id,testTasks[1].Id);
+        System.assertEquals(testTasks[1].Id,updatedTask5.Id);
         // Validate record was not modified
         System.assertEquals(originalDate,newDate);
+
+        /*
+        	Test the updateTask remote static action - send unsupporte field
+        */
+        Task updatedTask6 = MTL_myTaskListController.updateTask(testTasks[0].Id,'Subject','New Subject');
+        System.assertEquals(null,updatedTask6);
+
+		/*
+			Test the getNameFromID remote static action
+		*/
+		// Pass an Opportunity ID and make sure we get the Opportunity.Name
+		String recordName = MTL_myTaskListController.getNameFromID(testOpportunity.ID);
+		System.assertEquals(TEST_OPPORTUNITY_NAME,recordName);
+		// Pass a Task ID and make sure we get the Task.Status
+		recordName = MTL_myTaskListController.getNameFromID(testTasks[1].Id);
+		System.assertEquals(TASK_BASE_NAME+String.valueOf(1),recordName);
 
         /*
         	Test the sorting functionality
@@ -158,9 +221,9 @@ private class MTL_myTaskList_test {
         System.assertNotEquals(-1, testSearch);
 
         // Set the sort order and then test the filter string to ensure the sort order is set correctly
-        ApexPages.CurrentPage().getparameters().put('so', 'priorityASC');
+        ApexPages.CurrentPage().getparameters().put('so', 'priorityDESC');
         controller = new MTL_myTaskListController();
-        testSearch = controller.taskFilterAllOpenScript.indexOf('so=priorityASC');
+        testSearch = controller.taskFilterAllOpenScript.indexOf('so=priorityDESC');
         System.assertNotEquals(-1, testSearch);
         
         // Set the filter and then test the sort order string to ensure the filter is set correctly

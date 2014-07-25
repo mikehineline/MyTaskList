@@ -29,7 +29,7 @@
     OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED 
     OF THE POSSIBILITY OF SUCH DAMAGE.
 -->
-<apex:page controller="MTL_myTaskListController" sidebar="false" showHeader="{!pageFormat=='aloha'}" standardStylesheets="false" docType="html-5.0">
+<apex:page controller="MTL_myTaskListController" sidebar="false" showHeader="{!pageFormat=='aloha'}" standardStylesheets="false" docType="html-5.0"  tabStyle="MTL_My_Task_List__tab">
 
     <!-- Bootstrap core CSS -->
     <apex:stylesheet value="{!URLFOR($Resource.MTL_My_Task_List_Resources,'/css/bootstrap.min.css')}" />
@@ -100,6 +100,13 @@
                  		<li><a href="javascript:void(0);" onClick="javascript:location.assign('{!JSENCODE(taskFilterThisMonthScript)}');return false;">This Month</a></li>
                  	</ul>
             	</div>
+    			<!-- Admin Config Button -->
+				<apex:outputText rendered="{!pushTopicsPermissionsCreate}">
+            	<a title="Configure My Task List" href="/apex/MTL_My_Task_List_Config?isdtp={!$CurrentPage.parameters.isdtp}" id="configMTL">
+	            	<img src="{!URLFOR($Resource.MTL_My_Task_List_Resources,'/images/config_button.png')}" />
+	            </a>
+				</apex:outputText>
+    			<!-- /Admin Config Button -->
             </div>
             <div class="col-xs-3">
                 <a title="New Task" href="javascript:void(0);" onclick="javascript:MTL_openRecord(null,'primary','New Task','new','Task')" id="newTaskLink">
@@ -113,6 +120,7 @@
             </div>
         </div>
     	<!-- /Header Buttons -->
+    	
     
     	<!-- List of Tasks -->
         <div class="panel-group" id="taskList">
@@ -133,7 +141,7 @@
                                     </a>
                                 </p>
                                 <p>
-                                    <b>Due: </b>
+                                    <b>{!dueLabel}: </b>
                                     <span class="{!myTask.dueDateStyle}" id="taskActivityDate{!myTask.taskSObject.Id}">
                                         <apex:outputText value="{0,date,MM'/'dd'/'yyyy}">
                                             <apex:param value="{!myTask.taskSObject.ActivityDate}" />
@@ -141,7 +149,7 @@
                                     </span>
                                 </p>
                                 <p>
-                                    <b>RE: </b>
+                                    <b>{!relatedToLabel}: </b>
                                     <a href="javascript:void(0);" onclick="javascript:MTL_openRecord('{!JSENCODE(myTask.taskSObject.WhatId)}','primary','{!JSENCODE(myTask.taskSObject.What.Name)}','view','Task')" id="taskWhatURL{!myTask.taskSObject.Id}">
                                         <span id="taskWhat{!myTask.taskSObject.Id}">{!myTask.taskSObject.What.Name}</span>
                                     </a>
@@ -151,7 +159,7 @@
 					            <p>
                                     <script type="text/javascript">document.write(MTL_formatFieldLabelHTML('{!JSINHTMLENCODE(taskHeaderField.fieldLabel)}'));</script>
 									<span id="{!taskHeaderField.fieldName}-{!myTask.taskSObject.Id}">
-                                        <script type="text/javascript">document.write(MTL_formatFieldValueHTML('{!IF(taskHeaderField.needsEncoding, JSINHTMLENCODE(myTask.taskSObject[taskHeaderField.fieldName]), myTask.taskSObject[taskHeaderField.fieldName])}','{!taskHeaderField.fieldType}'));</script>
+                                        <script type="text/javascript">document.write(MTL_formatFieldValueHTML('{!IF(taskHeaderField.needsEncoding, JSINHTMLENCODE(myTask.taskSObject[taskHeaderField.fieldName]), myTask.taskSObject[taskHeaderField.fieldName])}','{!taskHeaderField.fieldType}',null,'{!JSINHTMLENCODE(taskHeaderField.fieldName)}','{!myTask.taskSObject.Id}'));</script>
 									</span>
 					            </p>
 					            </apex:repeat>
@@ -173,12 +181,12 @@
                             <div class="col-xs-10">
                                 <!-- Task Details -->
                                 <p>
-                                    <b>Status: </b>
+                                    <b>{!statusLabel}: </b>
                                     <span id="taskStatus{!myTask.taskSObject.Id}">{!myTask.taskSObject.Status}</span>
                                     <input type="hidden" id="statusPriorValue{!myTask.taskSObject.Id}" value="{!myTask.taskSObject.Status}" />
                                 </p>
                                 <p>
-                                    <b>Priority: </b>
+                                    <b>{!priorityLabel}: </b>
                                     <input type="hidden" id="priorityOriginalValue{!myTask.taskSObject.Id}" value="{!myTask.taskSObject.Priority}" />
                                     <span id="taskPriority{!myTask.taskSObject.Id}">{!myTask.taskSObject.Priority}</span>
                                     <span class="priorityIcon {!myTask.priorityIconClass}" id="taskPriorityDetails{!myTask.taskSObject.Id}">
@@ -186,7 +194,7 @@
                                     </span>
                                 </p>
                                 <p>
-                                    <b>Who: </b>
+                                    <b>{!whoLabel}: </b>
                                     <a href="javascript:void(0);" onclick="javascript:MTL_openRecord('{!JSENCODE(myTask.taskSObject.Who.Id)}','primary','{!JSENCODE(myTask.taskSObject.Who.Name)}','view','Task')" id="taskWhoURL{!myTask.taskSObject.Id}">
                                         <span id="taskWho{!myTask.taskSObject.Id}">{!myTask.taskSObject.Who.Name}</span>
                                     </a>
@@ -196,7 +204,7 @@
 					            <p>
                                     <script type="text/javascript">document.write(MTL_formatFieldLabelHTML('{!JSINHTMLENCODE(taskDetailsField.fieldLabel)}'));</script>
 									<span id="{!taskDetailsField.fieldName}-{!myTask.taskSObject.Id}">
-                                        <script type="text/javascript">document.write(MTL_formatFieldValueHTML('{!IF(taskDetailsField.needsEncoding, JSINHTMLENCODE(myTask.taskSObject[taskDetailsField.fieldName]), myTask.taskSObject[taskDetailsField.fieldName])}','{!taskDetailsField.fieldType}'));</script>
+                                        <script type="text/javascript">document.write(MTL_formatFieldValueHTML('{!IF(taskDetailsField.needsEncoding, JSINHTMLENCODE(myTask.taskSObject[taskDetailsField.fieldName]), myTask.taskSObject[taskDetailsField.fieldName])}','{!taskDetailsField.fieldType}',null,'{!JSINHTMLENCODE(taskDetailsField.fieldName)}','{!myTask.taskSObject.Id}'));</script>
 									</span>
 					            </p>
 					            </apex:repeat>
@@ -214,8 +222,11 @@
                                 <apex:outputLink title="Mark task complete and add notes" value="javascript:void(0);" onclick="javascript:MTL_openRecord('{!JSENCODE(myTask.taskSObject.Id)}','primary','{!JSENCODE(myTask.taskSObject.Subject)}','close','Task')" rendered="{!pageFormat != 'mobile'}" >
                                     <span class="taskAction"><button type="button" class="btn btn-default btn-sm" id="taskCloseButton{!myTask.taskSObject.Id}"><img src="{!URLFOR($Resource.MTL_My_Task_List_Resources,'/images/close_button.png')}" /></button></span><br />
                                 </apex:outputLink>
-                                    <a title="Edit this task" href="javascript:void(0);" onclick="javascript:MTL_openRecord('{!JSENCODE(myTask.taskSObject.Id)}','primary','{!JSENCODE(myTask.taskSObject.Subject)}','edit','Task')">
+                                <a title="Edit this task" href="javascript:void(0);" onclick="javascript:MTL_openRecord('{!JSENCODE(myTask.taskSObject.Id)}','primary','{!JSENCODE(myTask.taskSObject.Subject)}','edit','Task')">
                                     <span class="taskAction"><button type="button" class="btn btn-default btn-sm" id="taskEditButton{!myTask.taskSObject.Id}"><img src="{!URLFOR($Resource.MTL_My_Task_List_Resources,'/images/edit_button.png')}" /></button></span><br />
+                                </a>
+                                <a title="Push due date out 1 day" href="javascript:void(0);" onClick="javascript:MTL_updateTask('{!myTask.taskSObject.Id}','ActivityDate','1');return false;" id="taskPushActivityDateLink{!myTask.taskSObject.Id}">
+                                    <span class="taskAction"><button type="button" class="btn btn-default btn-sm" id="taskPushActivityDateButton{!myTask.taskSObject.Id}"><img src="{!URLFOR($Resource.MTL_My_Task_List_Resources,'/images/push_activitydate1_button.png')}" /></button></span><br />
                                 </a>
                                 <a title="One click priority toggle for this task" href="javascript:void(0);" onClick="javascript:MTL_togglePriority('{!myTask.taskSObject.Id}');return false;" id="taskTogglePriorityLink{!myTask.taskSObject.Id}">
                                     <span class="taskAction"><button type="button" class="btn btn-default btn-sm" id="taskTogglePriorityButton{!myTask.taskSObject.Id}"><img src="{!URLFOR($Resource.MTL_My_Task_List_Resources,'/images/priority_button.png')}" /></button></span><br />

@@ -34,6 +34,10 @@ public with sharing class MTL_myTaskListUtilities {
     public static String pushTopicName = 'MTL_myTaskListUpdates';
     public static Boolean pushTopicEnabled {get; set;} 
     
+	// Static getter to indicate whether user has write access to PushTopic
+	//	in which case they will be presented with the config option
+	public static Boolean getPushTopicsPermissionsCreate() { return Schema.sObjectType.PushTopic.isCreateable(); }
+
     /* Constructor */
     public MTL_myTaskListUtilities() {
     	// Test the status of the push topic to set the pushTopicEnabled flag
@@ -87,7 +91,7 @@ public with sharing class MTL_myTaskListUtilities {
 		PushTopic myTaskListPushTopic = new PushTopic();
 		myTaskListPushTopic.Name = pushTopicName;
 		myTaskListPushTopic.Query = pushTopicQueryString;
-		myTaskListPushTopic.ApiVersion = 30.0;
+		myTaskListPushTopic.ApiVersion = 31.0;
 		myTaskListPushTopic.NotifyForOperationCreate = true;
 		myTaskListPushTopic.NotifyForOperationUpdate = true;
 		myTaskListPushTopic.NotifyForOperationUndelete = true;
@@ -95,11 +99,7 @@ public with sharing class MTL_myTaskListUtilities {
 		myTaskListPushTopic.NotifyForFields = 'Referenced';
 		try {
 			insert myTaskListPushTopic;
-		} catch (DmlException e) {
-			// Push topic could not be added
-	       	System.Debug('The following error has occurred: ' + e.getMessage());
-			return false;
-		}
+		} catch (DmlException e) { System.Debug('The following error has occurred: ' + e.getMessage()); return false; }
 			
 		// Set the pushTopicEnabled flag and return true
 		pushTopicEnabled = true;
@@ -123,11 +123,7 @@ public with sharing class MTL_myTaskListUtilities {
 				delete oldMyTaskListPushTopics;
 				pushTopicEnabled = false;
 				return true;
-			} catch (DmlException e) {
-				// Push topic could not be deleted
-	        	System.Debug('The following error has occurred: ' + e.getMessage());
-				return false;
-			}
+			} catch (DmlException e) { System.Debug('The following error has occurred: ' + e.getMessage()); return false; }
 		}
 		// The topic was not found/deleted, return false
 		return false;
